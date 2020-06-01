@@ -27,10 +27,24 @@ run_test() {
     echo "Running test $SLUG..."
     if [[ -n $VERBOSE ]]; then
         docker build -t test-runner .
-        docker run --rm -v "$(pwd)"/"$EXERCISE_PATH":/mnt/"$EXERCISE_PATH" -v "$(pwd)"/output:/output test-runner "$SLUG" /mnt/"$EXERCISE_PATH"/ /output/
+        docker run \
+        --network none \
+        --read-only \
+        --rm \
+        --tmpfs /tmp:exec \
+        -v "$(pwd)"/"$EXERCISE_PATH":/mnt/"$EXERCISE_PATH" \
+        -v "$(pwd)"/output:/output \
+        test-runner "$SLUG" /mnt/"$EXERCISE_PATH"/ /output/
     else
         docker build -t test-runner . > /dev/null
-        docker run --rm -v "$(pwd)"/"$EXERCISE_PATH":/mnt/"$EXERCISE_PATH" -v "$(pwd)"/output:/output test-runner "$SLUG" /mnt/"$EXERCISE_PATH"/ /output/ > /dev/null
+        docker run \
+        --network none \
+        --read-only \
+        --rm \
+        --tmpfs /tmp:exec \
+        -v "$(pwd)"/"$EXERCISE_PATH":/mnt/"$EXERCISE_PATH" \
+        -v "$(pwd)"/output:/output \
+        test-runner "$SLUG" /mnt/"$EXERCISE_PATH"/ /output/ > /dev/null
     fi
     diff output/results.json "$EXERCISE_PATH"/expected_results.json
     echo "Passed"

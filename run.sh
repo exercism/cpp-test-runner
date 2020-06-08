@@ -9,6 +9,7 @@ test_file=$(echo "$1" | sed 's/-/_/')_test.cpp
 cd "$2" || exit
 cmake -S "$(pwd)" -B /tmp/build
 cd /tmp/build
-make
-./"$1" -r junit -o output.xml
-python3 "${cwd}"/process.py /tmp/build/output.xml "$3"results.json
+make 2> compilation-errors
+# In case of compilation errors the executable will not be created
+[[ -f "$1" ]] && ./"$1" -r junit -o test-output.xml
+python3 "${cwd}"/process.py /tmp/build/compilation-errors /tmp/build/test-output.xml "$3"results.json

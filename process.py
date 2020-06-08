@@ -1,15 +1,24 @@
 import sys
+import os
 import json
+from typing import Dict
 
 import junitparser
 
 
-if __name__ == "__main__":
-    input_file: str = sys.argv[1]
-    output_file: str = sys.argv[2]
-
+def process_tests_results(compilation_errors_file: str, tests_output_file: str) -> Dict:
     output = {}
-    xml = junitparser.JUnitXml.fromfile(input_file)
+
+    # Checks if JUnit xml output file exists, in case it doesn't
+    # compilation must have failed and tests can't be run.
+    if not os.path.isfile(tests_output_file):
+        output["status"] = "error"
+        with open(compilation_errors_file, "r") as f:
+            output["message"] = f.read()
+        output["tests"] = []
+        return output
+
+    xml = junitparser.JUnitXml.fromfile(tests_output_file)
     for suite in xml:
         status = "pass"
         if suite.errors:
@@ -17,8 +26,6 @@ if __name__ == "__main__":
         elif suite.failures:
             status = "fail"
         output["status"] = status
-
-        # TODO: Set top level message on error
 
         tests = []
         for test in suite:
@@ -44,5 +51,12 @@ if __name__ == "__main__":
             tests.append(test_data)
         output["tests"] = tests
 
-        with open(output_file, "w") as f:
-            f.write(json.dumps(output))
+    return output
+
+
+if __name__ == "__main__":
+    output: Dict = process_tests_results(sys.argv[1], sys.argv[2])
+    output_file: str = sys.argv[3]
+
+    with open(output_file, "w") as f:
+        f.write(json.dumps(output))

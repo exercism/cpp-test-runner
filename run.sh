@@ -7,6 +7,8 @@
 cwd=$(pwd)
 test_file=$(echo "$1" | sed 's/-/_/')_test.cpp
 cd "$2" || exit
-cmake -DOUTPUT_JUNIT_REPORT=ON -S "$(pwd)" -B /tmp/build
-cmake --build /tmp/build
+cmake -S "$(pwd)" -B /tmp/build
+cd /tmp/build
+make
+./"$1" -r junit -o output.xml
 python3 "${cwd}"/process.py /tmp/build/output.xml "$3"results.json

@@ -56,12 +56,6 @@ if(${MSVC})
         COMPILE_DEFINITIONS_DEBUG _SCL_SECURE_NO_WARNINGS)
 endif()
 
-# JUnit report is not used by default, it must be enabled
-# for the test runner to work correctly
-if(${OUTPUT_JUNIT_REPORT})
-    set(TEST_ARGUMENTS -r junit -o output.xml)
-endif()
-
 # Run the tests on every build
-add_custom_target(test_${exercise} ALL DEPENDS ${exercise} COMMAND $<TARGET_FILE:${exercise}> ${TEST_ARGUMENTS})
+add_custom_target(test_${exercise} ALL DEPENDS ${exercise} COMMAND $<TARGET_FILE:${exercise}>)
 

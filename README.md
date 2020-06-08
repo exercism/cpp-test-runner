@@ -26,7 +26,7 @@ In both cases you can show more informations, like Docker output, by using the f
 
 On the C++ track we use CMake for building the exercises and [Catch][catch-lib] as its test framework.
 
-Catch can report the tests results in [JUnit][junit] formatted xml when enabled, we do so during the config step in `run.sh` by settings the variable `OUTPUT_JUNIT_REPORT`, when this is done a file `output.xml` is generated during build time.
+Catch can report the tests results in [JUnit][junit] formatted xml when enabled, we do so during the config step in `run.sh` by running the built executable with certain flags, when this is done a file `output.xml` is generated during build time.
 
 This file is parsed with Python and the [junitparser][junitparser-lib] library in the `process.py` script that outputs a `results.json` file that respects the test runners specifications.
 

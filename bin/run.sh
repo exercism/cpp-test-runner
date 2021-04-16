@@ -41,7 +41,7 @@ echo "${slug}: testing..."
 cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
 
 cmake -DEXERCISM_RUN_ALL_TESTS=1 .
-make
+make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created
 [[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r junit -o "${test_output_file_name}"

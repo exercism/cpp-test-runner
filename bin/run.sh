@@ -36,21 +36,15 @@ mkdir -p "${output_dir}"
 
 echo "${slug}: testing..."
 
-# We copy the files in the current directory to a sub-directory matching the
-# exercise slug as the makefile uses the directory name to determine the files
-cp -R "${input_dir}/" "${build_dir}"
+# Copy the solution to a directory which names matches the slug as 
+# the makefile uses the directory name to determine the files
+cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
 
-ls -al /tmp
-ls -al "${build_dir}"
-
-# cmake .
-# make
-
-# cmake -S "${input_dir}" -B "${build_dir}"
-# make 2> "${compilation_errors_file_name}"
+cmake -DEXERCISM_RUN_ALL_TESTS=1 .
+make
 
 # In case of compilation errors the executable will not be created
-[[ -f "${binary_file}" ]] && chmod +x "${binary_file}" && "${binary_file}" -r junit -o "${test_output_file_name}"
+[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r junit -o "${test_output_file_name}"
 
 python3 "${process_file}" "${build_dir}/${compilation_errors_file_name}" "${build_dir}/${test_output_file_name}" "${results_file}"
 

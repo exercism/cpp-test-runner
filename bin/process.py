@@ -8,6 +8,7 @@ import junitparser
 
 def process_tests_results(compilation_errors_file: str, tests_output_file: str) -> Dict:
     output = {}
+    output["version"] = 2
 
     # Checks if JUnit xml output file exists, in case it doesn't
     # compilation must have failed and tests can't be run.

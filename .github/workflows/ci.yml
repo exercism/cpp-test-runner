@@ -1,31 +1,20 @@
-name: Runner tests
+name: CI
 
 on:
-  push:
-    paths:
-      - 'tests/**'
-      - 'run.sh'
-      - 'test.sh'
-      - 'process.py'
   pull_request:
-    paths:
-      - 'tests/**'
-      - 'run.sh'
-      - 'test.sh'
-      - 'process.py'
+    branches:
+      - main
+  push:
+    branches:
+      - main
 
 jobs:
-  runner-tests:
+  build:
+    name: Tests
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v2
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Checkout code
+        uses: actions/checkout@5a4ac9002d0be2fb38bd78e4b4dbde5606d7042f # 2.3.4
 
-      - name: Fetch everything
-        run: git fetch --prune --unshallow
-
-      - name: Run tests
-        shell: bash
-        run: ./test.sh
+      - name: Run Tests in Docker
+        run: bin/run-tests-in-docker.sh

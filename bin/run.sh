@@ -24,46 +24,36 @@ fi
 slug="$1"
 input_dir="${2%/}"
 output_dir="${3%/}"
+build_dir="/tmp/${slug}"
+process_file="/opt/test-runner/bin/process.py"
+compilation_errors_file_name="compilation-errors"
+test_output_file_name="test-output.xml"
 results_file="${output_dir}/results.json"
+binary_file="${build_dir}/${slug}"
 
 # Create the output directory if it doesn't exist
 mkdir -p "${output_dir}"
 
 echo "${slug}: testing..."
 
-# cwd=$(pwd)
-# test_file=$(echo "$1" | sed 's/-/_/')_test.cpp
-# cd "$2" || exit
-# cmake -S "$(pwd)" -B /tmp/build
-# cd /tmp/build
-# make 2> compilation-errors
-# # In case of compilation errors the executable will not be created
-# [[ -f "$1" ]] && ./"$1" -r junit -o test-output.xml
-# python3 "${cwd}"/process.py /tmp/build/compilation-errors /tmp/build/test-output.xml "$3"results.json
+# We copy the files in the current directory to a sub-directory matching the
+# exercise slug as the makefile uses the directory name to determine the files
+cp -R "${input_dir}/" "${build_dir}"
 
-# Run the tests for the provided implementation file and redirect stdout and
-# stderr to capture it
-# TODO: Replace 'RUN_TESTS_COMMAND' with the command to run the tests
-test_output=$(RUN_TESTS_COMMAND 2>&1)
+ls -al /tmp
+ls -al "${build_dir}"
 
-# Write the results.json file based on the exit code of the command that was 
-# just executed that tested the implementation file
-if [ $? -eq 0 ]; then
-    jq -n '{version: 1, status: "pass"}' > ${results_file}
-else
-    # OPTIONAL: Sanitize the output
-    # In some cases, the test output might be overly verbose, in which case stripping
-    # the unneeded information can be very helpful to the student
-    # sanitized_test_output=$(printf "${test_output}" | sed -n '/Test results:/,$p')
+# cmake .
+# make
 
-    # OPTIONAL: Manually add colors to the output to help scanning the output for errors
-    # If the test output does not contain colors to help identify failing (or passing)
-    # tests, it can be helpful to manually add colors to the output
-    # colorized_test_output=$(echo "${test_output}" \
-    #      | GREP_COLOR='01;31' grep --color=always -E -e '^(ERROR:.*|.*failed)$|$' \
-    #      | GREP_COLOR='01;32' grep --color=always -E -e '^.*passed$|$')
+# cmake -S "${input_dir}" -B "${build_dir}"
+# make 2> "${compilation_errors_file_name}"
 
-    jq -n --arg output "${test_output}" '{version: 1, status: "fail", output: $output}' > ${results_file}
-fi
+# In case of compilation errors the executable will not be created
+[[ -f "${binary_file}" ]] && chmod +x "${binary_file}" && "${binary_file}" -r junit -o "${test_output_file_name}"
+
+python3 "${process_file}" "${build_dir}/${compilation_errors_file_name}" "${build_dir}/${test_output_file_name}" "${results_file}"
+
+cd -
 
 echo "${slug}: done"

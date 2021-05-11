@@ -36,11 +36,11 @@ mkdir -p "${output_dir}"
 
 echo "${slug}: testing..."
 
-# Copy the solution to a directory which names matches the slug as 
+# Copy the solution to a directory which names matches the slug as
 # the makefile uses the directory name to determine the files
 cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
 
-cmake -DEXERCISM_RUN_ALL_TESTS=1 .
+cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
 make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created

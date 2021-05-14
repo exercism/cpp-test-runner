@@ -21,7 +21,7 @@ docker run \
     --network none \
     --read-only \
     --mount type=bind,src="${PWD}/tests",dst=/opt/test-runner/tests \
-    --mount type=volume,dst=/tmp \
+    --tmpfs /tmp:exec \
     --workdir /opt/test-runner \
     --entrypoint /opt/test-runner/bin/run-tests.sh \
     exercism/test-runner

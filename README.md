@@ -30,8 +30,8 @@ Catch can report the tests results in [JUnit][junit] formatted xml when enabled,
 
 This file is parsed with Python and the [junitparser][junitparser-lib] library in the `process.py` script that outputs a `results.json` file that respects the test runners specifications.
 
-[test-runner-interface]: https://github.com/exercism/docs/blob/main/building/tooling/test-runners/interface.md
-[test-runner-docker]: https://github.com/exercism/docs/blob/main/building/tooling/docker.md
+[test-runner-interface]: https://exercism.org/docs/building/tooling/test-runners/interface
+[test-runner-docker]: https://exercism.org/docs/building/tooling/test-runners/docker
 [cmake]: https://cmake.org/
 [catch-lib]: https://github.com/catchorg/Catch2
 [junit]: https://junit.org/junit5/

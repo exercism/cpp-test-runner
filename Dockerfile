@@ -1,6 +1,6 @@
 FROM alpine:3.11
 
-RUN apk add --no-cache coreutils g++ libc-dev cmake make python3 git
+RUN apk add --no-cache coreutils g++ libc-dev cmake make python3 git boost-date_time
 RUN pip3 install --upgrade pip
 RUN pip3 install junitparser
 

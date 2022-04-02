@@ -36,10 +36,10 @@ def process_tests_results(compilation_errors_file: str, tests_output_file: str) 
                 result = test.result[0]
                 if type(result) == junitparser.Failure:
                     test_data["status"] = "fail"
-                    test_data["message"] = result.message
+                    test_data["message"] = result.text
                 elif type(result) == junitparser.Error:
                     test_data["status"] = "fail"
-                    test_data["message"] = result.message
+                    test_data["message"] = result.text
 
             if out := test.system_out:
                 # Output MUST be limited at 500 chars

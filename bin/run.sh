@@ -44,9 +44,11 @@ cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
 make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created
-[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r junit -o "${test_output_file_name}"
+# use custom exercism reporter to directly export result.json
+[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r exercism -o "${results_file}" --list-reporters
 
-python3 "${process_file}" "${build_dir}/${compilation_errors_file_name}" "${build_dir}/${test_output_file_name}" "${results_file}"
+# TODO: Check how to process compilation_errors_file_name 
+# python3 "${process_file}" "${build_dir}/${compilation_errors_file_name}" "${build_dir}/${test_output_file_name}" "${results_file}"
 
 cd -
 

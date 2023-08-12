@@ -16,4 +16,5 @@ RUN git clone https://github.com/catchorg/Catch2.git --depth 1 --branch v3.4.0 &
 
 WORKDIR /opt/test-runner
 COPY . .
+RUN g++ -I ./include ./src/*.cpp -o ./bin/exercism_parser -lboost_system
 ENTRYPOINT ["/opt/test-runner/bin/run.sh"]

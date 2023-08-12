@@ -1,4 +1,4 @@
-FROM alpine:3.11
+FROM alpine:3.18
 
 RUN apk add --no-cache coreutils g++ libc-dev cmake make python3 git boost-dev
 RUN pip3 install --upgrade pip

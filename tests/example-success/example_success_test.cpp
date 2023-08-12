@@ -1,6 +1,6 @@
 #include "example_success.h"
 #ifdef EXERCISM_TEST_SUITE
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #else
 #include "test/catch.hpp"
 #endif

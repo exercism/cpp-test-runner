@@ -18,6 +18,10 @@ def process_tests_results(compilation_errors_file: str, tests_output_file: str) 
             output["message"] = f.read()
         output["tests"] = []
         return output
+    
+    with open(tests_output_file, 'r') as file:
+            data = file.read()
+    return data
 
     xml = junitparser.JUnitXml.fromfile(tests_output_file)
     for suite in xml:
@@ -27,6 +31,8 @@ def process_tests_results(compilation_errors_file: str, tests_output_file: str) 
         elif suite.failures:
             status = "fail"
         output["status"] = status
+
+        
 
         tests = []
         for test in suite:

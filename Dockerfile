@@ -1,8 +1,6 @@
-FROM alpine:3.11
+FROM alpine:3.18
 
-RUN apk add --no-cache coreutils g++ libc-dev cmake make python3 git boost-dev
-RUN pip3 install --upgrade pip
-RUN pip3 install junitparser
+RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev
 
 # Build Catch as a library directly inside the Docker image
 # since it takes a bit of time to compile it,this way we speed
@@ -16,4 +14,5 @@ RUN git clone https://github.com/vaeng/Catch2-with-exercism-reporter.git --depth
 
 WORKDIR /opt/test-runner
 COPY . .
+RUN g++ -I ./include ./src/*.cpp -o ./bin/exercism_parser -lboost_system
 ENTRYPOINT ["/opt/test-runner/bin/run.sh"]

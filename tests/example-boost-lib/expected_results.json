@@ -1,1 +1,1 @@
-{"version": 2, "status": "pass", "tests": [{"name": "test_1", "status": "pass"}, {"name": "test_2", "status": "pass"}, {"name": "test_3", "status": "pass"}, {"name": "test_4", "status": "pass"}, {"name": "test_5", "status": "pass"}]}
+{"version": 3, "status": "pass", "tests": [{"name": "test_1", "status": "pass"}, {"name": "test_2", "status": "pass"}, {"name": "test_3", "status": "pass"}, {"name": "test_4", "status": "pass"}, {"name": "test_5", "status": "pass"}]}

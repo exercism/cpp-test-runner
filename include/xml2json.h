@@ -27,4 +27,5 @@ struct Output_message
     void load_from_catch2_xml(const std::string &xml_test_output_file, const std::string &compilation_error_file);
     void save_as_exercism_json(const std::string &filename);
     std::string build_test_message(const pt::ptree &tree);
+    void generate_test_code_from_test_file(const std::string &test_file_path);
 };

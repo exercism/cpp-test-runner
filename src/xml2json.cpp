@@ -1,5 +1,6 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/json/serialize.hpp>
 
 #include <exception>
 #include <iostream>
@@ -8,15 +9,16 @@
 #include "helpers.h"
 #include "xml2json.h"
 
-std::string escape_line_breaks(std::string text)
+void clean_test_case_output(std::string& text)
 {
-    boost::replace_all(text, "\n", "\\n");
-    return text;
+    boost::replace_all(text, "#if defined(EXERCISM_RUN_ALL_TESTS)", "");
+    boost::replace_all(text, "#endif", "");
+    rtrim(text);
 }
 
 void Output_message::load_from_catch2_xml(const std::string &xml_test_output_file, const std::string &compilation_error_file)
 {
-    // Create empty property tree object
+    // Create an empty property tree object
     pt::ptree tree;
 
     // Parse the XML into the property tree.
@@ -76,7 +78,8 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
                 output = test_case.second.get<std::string>("OverallResult.StdOut");
                 // The output text, cannot exceed 500 characters:
                 const int character_limit{500};
-                if(output.length() > character_limit) {
+                if (output.length() > character_limit)
+                {
                     output.resize(449);
                     output += "\nOutput was truncated. Please limit to 500 chars";
                 }
@@ -90,7 +93,7 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
                 status,
                 message,
                 output,
-                "", // TODO: Make test_code
+                "", // Test Code is generated from another function that can be called with the test_case_file
                 task_id};
             tests.emplace_back(result);
         }
@@ -108,7 +111,7 @@ std::string to_json_pair(const std::string &name, const std::string &value, bool
 {
     if (value != "")
     {
-        return (first_item ? "\"" : ", \"") + name + "\": \"" + escape_line_breaks(value) + "\"";
+        return (first_item ? "\"" : ", \"") + name + "\": " + boost::json::serialize(value);
     }
     return "";
 }
@@ -170,6 +173,22 @@ std::string Output_message::build_test_message(const pt::ptree &tree)
     return "\nFAILED:\n  " + testing_type + "( " + original + " )\nwith expansion:\n  " + expanded + "\nat " + filename + ":" + line + "\n";
 }
 
+void Output_message::generate_test_code_from_test_file(const std::string &test_file_path)
+{
+    const std::string file_content{read_file(test_file_path)};
+    for (auto &test_case : tests)
+    {
+        // Scans from the test name to the first curly and goes to the next "TEST_CASE" backward. 
+        // Will also call a clean function to remove some common fragments between test cases.
+        size_t position_of_test_name = file_content.find(test_case.name);
+        size_t position_of_first_curly = file_content.find('{', position_of_test_name);
+        size_t position_of_next_test = file_content.find("TEST_CASE", position_of_test_name);
+        std::string test_case_content{file_content.substr(position_of_first_curly, position_of_next_test - position_of_first_curly)};
+        clean_test_case_output(test_case_content);
+        test_case.test_code = test_case_content; 
+    }
+}
+
 void Test_result::add_result_to_json(std::ofstream &json_file) const
 {
     json_file << "{"
@@ -177,10 +196,10 @@ void Test_result::add_result_to_json(std::ofstream &json_file) const
               << to_json_pair("status", status);
     if (status != "pass")
     {
-        json_file << to_json_pair("message", message)
-                  << to_json_pair("test_code", test_code);
+        json_file << to_json_pair("message", message);
     }
-    json_file << to_json_pair("output", output);
-    json_file << to_json_pair("task_id", task_id);
-    json_file << "}";
+    json_file << to_json_pair("output", output)
+              << to_json_pair("test_code", test_code)
+              << to_json_pair("task_id", task_id)
+              << "}";
 }

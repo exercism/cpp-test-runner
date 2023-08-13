@@ -29,6 +29,7 @@ compilation_errors_file_name="compilation-errors"
 test_output_file_name="test-output.xml"
 results_file="${output_dir}/results.json"
 binary_file="${build_dir}/${slug}"
+test_file_path="${build_dir}/${slug//-/_}_test.cpp"
 
 # Create the output directory if it doesn't exist
 mkdir -p "${output_dir}"
@@ -38,6 +39,9 @@ echo "${slug}: testing..."
 # Copy the solution to a directory which names matches the slug as
 # the makefile uses the directory name to determine the files
 cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
+
+# Replace the old Catch2 v2 include line with Catch2 v3
+sed -i -e 's/#include <catch2\/catch.hpp>/#include <catch2\/catch_all.hpp>/g' "${test_file_path}"
 
 cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
 make 2> "${compilation_errors_file_name}"

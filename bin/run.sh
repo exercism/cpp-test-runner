@@ -48,7 +48,7 @@ make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created
 [[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r xml -o "${test_output_file_name}"
-/opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}"
+/opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
 
 cd -
 

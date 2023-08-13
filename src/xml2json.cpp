@@ -53,7 +53,7 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
             try
             {
                 std::string tags{test_case.second.get<std::string>("<xmlattr>.tags")};
-                size_t found = tags.find("task_"); // TODO: check if multiple tags have different listings and break the method
+                size_t found = tags.find("task_");
                 if (found != std::string::npos)
                 {
                     task_id = tags[found + 5] - '0';
@@ -70,11 +70,26 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
             {
             }
 
+            std::string output{""};
+            try
+            {
+                output = test_case.second.get<std::string>("OverallResult.StdOut");
+                // The output text, cannot exceed 500 characters:
+                const int character_limit{500};
+                if(output.length() > character_limit) {
+                    output.resize(449);
+                    output += "\nOutput was truncated. Please limit to 500 chars";
+                }
+            }
+            catch (...)
+            {
+            }
+
             Test_result result{
                 name,
                 status,
                 message,
-                "", // TODO: Make output
+                output,
                 "", // TODO: Make test_code
                 task_id};
             tests.emplace_back(result);
@@ -163,9 +178,9 @@ void Test_result::add_result_to_json(std::ofstream &json_file) const
     if (status != "pass")
     {
         json_file << to_json_pair("message", message)
-                  << to_json_pair("output", output)
                   << to_json_pair("test_code", test_code);
     }
+    json_file << to_json_pair("output", output);
     json_file << to_json_pair("task_id", task_id);
     json_file << "}";
 }

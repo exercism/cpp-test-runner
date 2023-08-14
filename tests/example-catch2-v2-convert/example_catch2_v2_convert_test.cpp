@@ -1,6 +1,6 @@
-#include "example_empty_file.h"
+#include "example_catch2_v2_convert.h"
 #ifdef EXERCISM_TEST_SUITE
-#include <catch2/catch_all.hpp>
+#include <catch2/catch.hpp>
 #else
 #include "test/catch.hpp"
 #endif

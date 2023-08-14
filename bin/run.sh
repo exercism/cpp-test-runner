@@ -25,11 +25,11 @@ slug="$1"
 input_dir="${2%/}"
 output_dir="${3%/}"
 build_dir="/tmp/${slug}"
-process_file="/opt/test-runner/bin/process.py"
 compilation_errors_file_name="compilation-errors"
 test_output_file_name="test-output.xml"
 results_file="${output_dir}/results.json"
 binary_file="${build_dir}/${slug}"
+test_file_path="${build_dir}/${slug//-/_}_test.cpp"
 
 # Create the output directory if it doesn't exist
 mkdir -p "${output_dir}"
@@ -40,13 +40,15 @@ echo "${slug}: testing..."
 # the makefile uses the directory name to determine the files
 cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
 
+# Replace the old Catch2 v2 include line with Catch2 v3
+sed -i -e 's/#include <catch2\/catch.hpp>/#include <catch2\/catch_all.hpp>/g' "${test_file_path}"
+
 cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
 make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created
-[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r junit -o "${test_output_file_name}"
-
-python3 "${process_file}" "${build_dir}/${compilation_errors_file_name}" "${build_dir}/${test_output_file_name}" "${results_file}"
+[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r xml -o "${test_output_file_name}"
+/opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
 
 cd -
 

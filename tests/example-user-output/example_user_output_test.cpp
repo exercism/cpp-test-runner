@@ -1,4 +1,4 @@
-#include "example_empty_file.h"
+#include "example_user_output.h"
 #ifdef EXERCISM_TEST_SUITE
 #include <catch2/catch_all.hpp>
 #else

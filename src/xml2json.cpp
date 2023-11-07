@@ -16,6 +16,15 @@ void clean_test_case_output(std::string& text)
     rtrim(text);
 }
 
+std::string restrict_msg_length(std::string uncut_msg) {
+    // the database limits messages to 65536 characters, lets err on the safe side and cut at 65k
+    int limit{65'000};
+    if (uncut_msg.length() > limit) {
+        return uncut_msg.substr(0, limit) + "... (Output was truncated.)";
+    }
+    return uncut_msg;
+}
+
 void Output_message::load_from_catch2_xml(const std::string &xml_test_output_file, const std::string &compilation_error_file)
 {
     // Create an empty property tree object
@@ -48,7 +57,7 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
             if (!test_case.second.get<bool>("OverallResult.<xmlattr>.success"))
             {
                 status = "fail";
-                message = build_test_message(test_case.second);
+                message = restrict_msg_length(build_test_message(test_case.second));
             }
 
             int task_id{0};
@@ -103,7 +112,7 @@ void Output_message::load_from_catch2_xml(const std::string &xml_test_output_fil
         // Checks if xml output file exists, in case it doesn't
         // compilation must have failed and tests can't be run.
         status = "error";
-        message = read_file(compilation_error_file);
+        message = restrict_msg_length(read_file(compilation_error_file));
     }
 }
 

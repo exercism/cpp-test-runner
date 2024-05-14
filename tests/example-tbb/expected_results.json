@@ -1,0 +1,1 @@
+{"version": 3, "status": "pass", "tests": [{"name": "basic functionality", "status": "pass", "test_code": "{\n    REQUIRE(parallel_tester(1));\n}"}, {"name": "parallel functionality", "status": "pass", "test_code": "{\n    REQUIRE(parallel_tester(3));\n}"}]}

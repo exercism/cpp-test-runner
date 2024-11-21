@@ -8,8 +8,6 @@
 
 void sleep(float seconds)
 {
-    clock_t startClock = clock();
-    float secondsAhead = seconds * CLOCKS_PER_SEC;
     std::this_thread::sleep_for(std::chrono::duration<float>{seconds});
 }
 

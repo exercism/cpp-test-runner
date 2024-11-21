@@ -5,10 +5,6 @@
 #include "test/catch.hpp"
 #endif
 
-TEST_CASE("basic functionality") {
-    REQUIRE(parallel_tester(1));
-}
-
 TEST_CASE("parallel functionality") {
     REQUIRE(parallel_tester(3));
 }

@@ -1,6 +1,6 @@
 FROM alpine:3.18
 
-RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev
+RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev libtbb-dev
 
 # Build Catch as a library directly inside the Docker image
 # since it takes a bit of time to compile it,this way we speed

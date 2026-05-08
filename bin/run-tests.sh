@@ -31,8 +31,13 @@ for test_dir in tests/*; do
     #   -e "s~${test_dir_path}~/solution~g" \
     #   "${results_file_path}"
 
+    # Add trailing newlines. Ignore line numbers.
+    for i in "${results_file_path}" "${expected_results_file_path}"; do
+        sed 's/:\d\+:/:NN:/g' "${i}" "${i}" > "${i}.cleaned"
+    done
     echo "${test_dir_name}: comparing results.json to expected_results.json"
-    diff "${results_file_path}" "${expected_results_file_path}"
+    diff "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"
+    rm "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"
 
     if [ $? -ne 0 ]; then
         exit_code=1

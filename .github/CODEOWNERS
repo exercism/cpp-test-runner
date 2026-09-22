@@ -1,1 +1,4 @@
 * @exercism/guardians
+
+# Writes to the test-runners bucket, so changes to it need sign-off.
+/.github/workflows/publish-clientside.yml @iHiD @exercism/maintainers-admin

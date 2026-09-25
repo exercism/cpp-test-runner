@@ -22,26 +22,22 @@ for test_dir in tests/*; do
 
     bin/run.sh "${test_dir_name}" "${test_dir_path}" "${test_dir_path}"
 
-    # OPTIONAL: Normalize the results file
-    # If the results.json file contains information that changes between 
-    # different test runs (e.g. timing information or paths), you should normalize
-    # the results file to allow the diff comparison below to work as expected
-    # sed -i -E \
-    #   -e 's/Elapsed time: [0-9]+\.[0-9]+ seconds//g' \
-    #   -e "s~${test_dir_path}~/solution~g" \
-    #   "${results_file_path}"
-
     # Add trailing newlines. Ignore line numbers.
+    # A build error's message is the compiler's own output, which differs
+    # between GCC in the Docker image and clang in the browser runner's
+    # sysroot, and between versions of either. Only that there was one is
+    # compared.
     for i in "${results_file_path}" "${expected_results_file_path}"; do
-        sed 's/:\d\+:/:NN:/g' "${i}" "${i}" > "${i}.cleaned"
+        sed \
+            -e 's/:[0-9]\{1,\}:/:NN:/g' \
+            -e '/^{"version": 3, "status": "error"/ s/"message": ".*"}$/"message": "<compiler output>"}/' \
+            "${i}" "${i}" > "${i}.cleaned"
     done
     echo "${test_dir_name}: comparing results.json to expected_results.json"
-    diff "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"
-    rm "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"
-
-    if [ $? -ne 0 ]; then
+    if ! diff "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"; then
         exit_code=1
     fi
+    rm "${results_file_path}.cleaned" "${expected_results_file_path}.cleaned"
 done
 
 exit ${exit_code}

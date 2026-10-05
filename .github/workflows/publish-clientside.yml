@@ -175,7 +175,7 @@ jobs:
             /opt/test-runner/bin/run-tests.sh
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd
         with:
           role-to-assume: ${{ secrets.AWS_CLIENTSIDE_PUBLISH_ROLE_ARN }}
           aws-region: ${{ secrets.AWS_REGION }}
@@ -185,11 +185,12 @@ jobs:
         run: |
           # Content-addressed over everything that lands at the prefix - the
           # tarball AND boot.json. The tarball holds a freshly compiled parser,
-          # so this is only stable across deploys if clang's output is. Re-running a deploy that changed nothing then
-          # republishes to the same prefix rather than minting a new one and
-          # busting every student's cache. And a change to only one of them
-          # (an env var in clientside.json, say) still gets a new prefix, which
-          # matters because the old one is cached as immutable for a year.
+          # so this is only stable across deploys if clang's output is.
+          # Re-running a deploy that changed nothing then republishes to the
+          # same prefix rather than minting a new one and busting every
+          # student's cache. And a change to only one of them (an env var in
+          # clientside.json, say) still gets a new prefix, which matters because
+          # the old one is cached as immutable for a year.
           hash="$(cat test-runner.tar boot.json | sha256sum | cut -c1-12)"
           {
             echo "hash=${hash}"

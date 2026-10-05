@@ -41,7 +41,7 @@ set -e
 # With wasm-opt afterwards, that is about 55KB.
 #
 # No -lboost_system, unlike the Dockerfile: it has been header-only since
-# Boost 1.69 and the stub library is gone from recent releases.
+# Boost 1.69, and the sysroot does not carry the stub library.
 # shellcheck disable=SC2016
 IN_KERNEL='
 set -e

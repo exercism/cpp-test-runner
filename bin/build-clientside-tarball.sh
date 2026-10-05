@@ -9,10 +9,10 @@
 #     COPY . .
 #
 # The kernel's sysroot carries clang, cmake, boost and Catch2 but not this
-# runner, so the runner ships as a tarball that is unpacked at boot. Staging it here rather
-# than tarring the repo directly means the archive's layout is exactly what the
-# kernel should end up with, and nothing that only makes sense on a developer's
-# machine goes along for the ride.
+# runner, so the runner ships as a tarball that is unpacked at boot. Staging it
+# here rather than tarring the repo directly means the archive's layout is
+# exactly what the kernel should end up with, and nothing that only makes sense
+# on a developer's machine goes along for the ride.
 #
 # bin/exercism_parser must already have been built for the kernel, by
 # bin/build-clientside-parser.sh: the one the Dockerfile builds is a native

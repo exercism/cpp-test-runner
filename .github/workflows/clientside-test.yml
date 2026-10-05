@@ -45,12 +45,14 @@ jobs:
       # From where the website serves them, so what's tested is exactly what
       # students get. Nothing here is published until the track points at it,
       # so a PR naming an unpublished kernel or sysroot fails right here.
+      # --compressed: they are stored brotli-encoded, and what lands on disk has
+      # to be the decoded bytes, as in a browser.
       - name: Fetch the kernel and sysroot
         run: |
           base="https://exercism.org/test-runners"
           fetch() {
             mkdir -p "$(dirname "$1")"
-            curl --fail --silent --show-error --location --retry 3 "${base}/$1" --output "$1"
+            curl --fail --silent --show-error --location --retry 3 --compressed "${base}/$1" --output "$1"
           }
           for f in kernel.js kernel_bg.wasm kernel_client.mjs; do
             fetch "${{ steps.config.outputs.kernel }}/${f}"

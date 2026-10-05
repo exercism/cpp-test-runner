@@ -95,12 +95,13 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
       # The kernel is needed here, unlike for jq, to build the parser. Both come
-      # from where the website serves them, as in clientside-test.yml.
+      # from where the website serves them, as in clientside-test.yml, and are
+      # stored brotli-encoded, hence --compressed.
       - name: Fetch the kernel and sysroot
         run: |
           fetch() {
             mkdir -p "$(dirname "$1")"
-            curl --fail --silent --show-error --location --retry 3 "https://exercism.org/$1" --output "$1"
+            curl --fail --silent --show-error --location --retry 3 --compressed "https://exercism.org/$1" --output "$1"
           }
           for f in kernel.js kernel_bg.wasm kernel_client.mjs; do
             fetch "test-runners/kernel/${{ steps.config.outputs.kernel }}/${f}"
@@ -114,7 +115,8 @@ jobs:
           # precompile names paths inside the sysroot. A typo, or a version bump that
           # moves a binary, otherwise fails at boot in a student's browser with
           # nothing useful in the console.
-          tar -tf "${{ steps.config.outputs.sysroot_prefix }}/sysroot.tar" | sed 's|^|/|' | sort > sysroot-paths.txt
+          # The stubs for the sysroot's binaries carry PAX records tar does not know.
+          tar --warning=no-unknown-keyword -tf "${{ steps.config.outputs.sysroot_prefix }}/sysroot.tar" | sed 's|^|/|' | sort > sysroot-paths.txt
 
           status=0
           while read -r path; do

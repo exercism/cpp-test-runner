@@ -29,7 +29,7 @@ compilation_errors_file_name="compilation-errors"
 test_output_file_name="test-output.xml"
 results_file="${output_dir}/results.json"
 binary_file="${build_dir}/${slug}"
-test_file_path="${build_dir}/${slug//-/_}_test.cpp"
+test_file_path="${build_dir}/$(echo "${slug}" | tr - _)_test.cpp"
 
 # Create the output directory if it doesn't exist
 mkdir -p "${output_dir}"
@@ -47,7 +47,7 @@ cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
 make 2> "${compilation_errors_file_name}"
 
 # In case of compilation errors the executable will not be created
-[[ -f "./${slug}" ]] && chmod +x "./${slug}" && "./${slug}" -r xml -o "${test_output_file_name}"
+[ -f "./${slug}" ] && chmod +x "./${slug}" && "./${slug}" -r xml -o "${test_output_file_name}"
 /opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
 
 cd -

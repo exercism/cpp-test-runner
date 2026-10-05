@@ -17,6 +17,12 @@
 //
 // Needs `playwright` on the module path and a Chromium it can launch
 // (`npx playwright install --with-deps chromium`, or CHROMIUM_PATH).
+//
+// A published sysroot carries its wasm binaries as stubs that name the real
+// bytes by absolute path under /test-runners/, which the kernel fetches from
+// this origin on first use. Those requests are passed through to where the
+// website serves them (TEST_RUNNERS_BASE overrides), so what runs here is
+// what students get. A raw, unstubbed sysroot never asks.
 
 import fs from "node:fs";
 import http from "node:http";
@@ -40,6 +46,7 @@ if (!argv.length) {
 }
 
 const DEBUG = !!process.env.KERNEL_DEBUG;
+const TEST_RUNNERS_BASE = process.env.TEST_RUNNERS_BASE ?? "https://exercism.org/test-runners";
 
 const files = {
   "/kernel/kernel.js": [path.join(kernelDir, "kernel.js"), "text/javascript"],
@@ -109,9 +116,28 @@ const PAGE = `<!doctype html><meta charset="utf-8"><title>kernel</title>
   window.__ready = true;
 </script>`;
 
+// fetch() has already undone any Content-Encoding, so the bytes go out plain.
+// Immutable, as upstream: the kernel fetches a stubbed file every time it is
+// opened, and a test suite's links open the same libraries over and over.
+async function passThrough(p, res) {
+  const upstream = await fetch(TEST_RUNNERS_BASE + p.slice("/test-runners".length));
+  if (!upstream.ok) { res.writeHead(upstream.status, ISOLATION); return res.end(); }
+  const bytes = Buffer.from(await upstream.arrayBuffer());
+  res.writeHead(200, {
+    ...ISOLATION,
+    "Content-Type": upstream.headers.get("content-type") ?? "application/octet-stream",
+    "Content-Length": bytes.length,
+    "Cache-Control": "public, max-age=31536000, immutable",
+  });
+  res.end(bytes);
+}
+
 const server = http.createServer((req, res) => {
   const p = new URL(req.url, "http://localhost").pathname;
   if (p === "/") { res.writeHead(200, { ...ISOLATION, "Content-Type": "text/html" }); return res.end(PAGE); }
+  if (p.startsWith("/test-runners/")) {
+    return passThrough(p, res).catch((e) => { console.error("[proxy]", p, e.message); res.writeHead(502, ISOLATION); res.end(); });
+  }
   const entry = files[p];
   if (!entry) { res.writeHead(404, ISOLATION); return res.end(); }
   res.writeHead(200, { ...ISOLATION, "Content-Type": entry[1] });

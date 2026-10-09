@@ -18,3 +18,9 @@ jobs:
 
       - name: Run Tests in Docker
         run: bin/run-tests-in-docker.sh
+
+  # The same suite, run the way a student's browser runs it. The workflow is
+  # written to move to exercism/github-actions; this line then becomes
+  #   uses: exercism/github-actions/.github/workflows/clientside-test.yml@main
+  clientside:
+    uses: ./.github/workflows/clientside-test.yml

@@ -1,0 +1,13 @@
+{
+  "sysroot": {
+    "version": "TODO",
+    "id": 1
+  },
+  "kernel": "TODO",
+  "timeout": 30,
+  "env": {},
+  "preload": [
+    "/usr/bin/bash",
+    "/usr/bin/coreutils"
+  ]
+}

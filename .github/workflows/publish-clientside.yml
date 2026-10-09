@@ -1,0 +1,190 @@
+# Publishes the browser test runner: a tarball of this repo's bin/run.sh that
+# the wasm kernel unpacks at boot, the boot.json that goes with it, and
+# the latest.json that points the website at both.
+#
+# This is deliberately NOT part of deploy.yml. That file is synced into every
+# tooling repo from exercism/org-wide-files, so edits to it here are reverted
+# on the next sync. It should move there once a second track has one of these
+# and it is clear what is actually common between them.
+name: Publish client-side runner
+
+on:
+  # Chained off Deploy rather than run on push, so the Docker image and the
+  # browser tarball always ship from the same commit. They are the same
+  # bin/run.sh, and a student running tests in the browser should be running
+  # exactly what the server would have run.
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # for the OIDC token exchanged for the AWS role
+
+env:
+  BUCKET: exercism-test-runners
+
+jobs:
+  publish:
+    name: Publish
+    # Forks have no role to assume. A failed Deploy means the image never
+    # shipped, and publishing the tarball then would put the browser ahead of
+    # the server. And only main publishes, however the run was started:
+    # latest.json is production, and a branch must not be able to repoint it.
+    if: >-
+      github.repository_owner == 'exercism' &&
+      (
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'workflow_run' &&
+         github.event.workflow_run.conclusion == 'success' &&
+         github.event.workflow_run.head_branch == 'main')
+      )
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          # workflow_run starts from the default branch, so check out the
+          # commit Deploy actually built.
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
+
+      - name: Read clientside.json
+        id: config
+        run: |
+          # The track is the repo name, so this file is identical in every
+          # test runner repo.
+          track="${GITHUB_REPOSITORY##*/}"
+          track="${track%-test-runner}"
+          echo "TRACK=${track}" >> "$GITHUB_ENV"
+
+          # These end up in S3 keys and in later steps' shell, so they are held
+          # to a strict shape even though the file is on main and trusted.
+          segment() {
+            local key="$1" value="$2"
+            if ! [[ "${value}" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]]; then
+              echo "::error::clientside.json: ${key} must be a single path segment, got '${value}'"
+              exit 1
+            fi
+          }
+
+          version="$(jq -er '.sysroot.version' clientside.json)"
+          segment sysroot.version "${version}"
+          id="$(jq -er '.sysroot.id | select(type == "number" and . == floor and . >= 1)' clientside.json)"
+
+          kernel="$(jq -er '.kernel' clientside.json)"
+          segment kernel "${kernel}"
+
+          timeout="$(jq -er '.timeout | select(type == "number")' clientside.json)"
+
+          {
+            echo "sysroot_version=${version}"
+            echo "sysroot_id=${id}"
+            # Where this track's sysroot lives, relative to the bucket. One
+            # place, because it is needed to read the sysroot here and to
+            # point the browser at it later.
+            echo "sysroot_prefix=test-runners/sysroot/${track}/${version}/${id}"
+            echo "kernel=${kernel}"
+            echo "timeout=${timeout}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build the tarball
+        run: bin/build-clientside-tarball.sh test-runner.tar
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@cbe3b392738ccf3f987d68400dafcf4b0624a56c
+        with:
+          role-to-assume: ${{ secrets.AWS_CLIENTSIDE_PUBLISH_ROLE_ARN }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Check the sysroot has what we preload
+        run: |
+          # preload names paths inside the sysroot. A typo, or a version bump that
+          # moves a binary, otherwise fails at boot in a student's browser with
+          # nothing useful in the console.
+          aws s3 cp "s3://${BUCKET}/${{ steps.config.outputs.sysroot_prefix }}/sysroot.tar" sysroot.tar --quiet
+          tar -tf sysroot.tar | sed 's|^|/|' | sort > sysroot-paths.txt
+
+          status=0
+          while read -r path; do
+            grep -qxF "${path}" sysroot-paths.txt || { echo "::error::${path} is in preload but not in the sysroot"; status=1; }
+          done < <(jq -r '.preload[]' clientside.json)
+          exit "${status}"
+
+      - name: Build boot.json
+        run: |
+          # The sysroot publishes the half that describes itself - PATH, HOME,
+          # the licence - and this repo owns the half that describes the track.
+          aws s3 cp "s3://${BUCKET}/${{ steps.config.outputs.sysroot_prefix }}/boot.json" base-boot.json --quiet
+
+          jq -s '.[0] as $base | .[1] as $track |
+            $base + {
+              env: ($base.env + ($track.env // {})),
+              preload: ($track.preload // $base.preload)
+            }' base-boot.json clientside.json > boot.json
+
+      - name: Derive the build id
+        id: build
+        run: |
+          # Content-addressed over everything that lands at the prefix - the
+          # tarball AND boot.json. Re-running a deploy that changed nothing then
+          # republishes to the same prefix rather than minting a new one and
+          # busting every student's cache. And a change to only one of them
+          # (an env var in clientside.json, say) still gets a new prefix, which
+          # matters because the old one is cached as immutable for a year.
+          hash="$(cat test-runner.tar boot.json | sha256sum | cut -c1-12)"
+          {
+            echo "hash=${hash}"
+            # Under the sysroot it was built and checked against, so a listing
+            # of runner/<track>/<version>/<id>/ is every runner made for that sysroot.
+            echo "prefix=test-runners/runner/${TRACK}/${{ steps.config.outputs.sysroot_version }}/${{ steps.config.outputs.sysroot_id }}/${hash}"
+            # latest.json wants a single string for the version.
+            echo "version=${{ steps.config.outputs.sysroot_version }}-${{ steps.config.outputs.sysroot_id }}-${hash}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Publish the build
+        id: publish
+        run: |
+          prefix="${{ steps.build.outputs.prefix }}"
+          # Immutable: nothing at this prefix is ever rewritten, because the
+          # prefix ends in a hash of the contents.
+          cache="public, max-age=31536000, immutable"
+
+          aws s3 cp test-runner.tar "s3://${BUCKET}/${prefix}/test-runner.tar" \
+            --content-type application/x-tar --cache-control "${cache}"
+          aws s3 cp boot.json "s3://${BUCKET}/${prefix}/boot.json" \
+            --content-type application/json --cache-control "${cache}"
+
+          echo "prefix=/${prefix}" >> "$GITHUB_OUTPUT"
+
+      - name: Point the track at it
+        run: |
+          # Written last. latest.json is the only mutable object in the tree,
+          # so until this lands the new build is invisible and students keep
+          # getting the old one - rather than briefly getting a half-published
+          # one.
+          jq -n \
+            --arg version "${{ steps.build.outputs.version }}" \
+            --argjson timeout "${{ steps.config.outputs.timeout }}" \
+            --arg kernel "/test-runners/kernel/${{ steps.config.outputs.kernel }}/" \
+            --arg boot "${{ steps.publish.outputs.prefix }}/boot.json" \
+            --arg sysroot "/${{ steps.config.outputs.sysroot_prefix }}/sysroot.tar" \
+            --arg testRunner "${{ steps.publish.outputs.prefix }}/test-runner.tar" \
+            '{type: "kernel", version: $version, timeout: $timeout,
+              kernel: $kernel, boot: $boot, sysroot: $sysroot, testRunner: $testRunner}' \
+            > latest.json
+
+          cat latest.json
+
+          aws s3 cp latest.json "s3://${BUCKET}/test-runners/${TRACK}/latest.json" \
+            --content-type application/json --cache-control "public, max-age=60"
+
+      - name: Summarise
+        run: |
+          {
+            echo "### Published \`${{ steps.build.outputs.version }}\`"
+            echo
+            echo '```json'
+            cat latest.json
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

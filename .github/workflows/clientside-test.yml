@@ -1,0 +1,90 @@
+# Runs a track's test-runner suite inside the wasm kernel, on the kernel and
+# sysroot its clientside.json names: the track's bin/run.sh, driven by its own
+# bin/run-tests.sh, in headless Chromium. It is the browser equivalent of
+# `bin/run-tests-in-docker.sh`, and what's under test is byte-for-byte the
+# tarball publish-clientside.yml would ship.
+#
+# Lives here for now but is written as the reusable workflow it will become
+# in exercism/github-actions. Nothing in it is track-specific except what it
+# reads from clientside.json. "Get the harness" is the only step that changes
+# on the move.
+name: Client-side tests
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    name: Tests (client-side)
+    runs-on: ubuntu-26.04
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # Once this workflow lives in exercism/github-actions, this becomes a
+      # sparse checkout of that repo's clientside/ into harness/. Today the
+      # harness is beside this file.
+      - name: Get the harness
+        run: cp -r .github/clientside harness
+
+      - name: Read clientside.json
+        id: config
+        run: |
+          track="${GITHUB_REPOSITORY##*/}"
+          track="${track%-test-runner}"
+          kernel="$(jq -er '.kernel' clientside.json)"
+          version="$(jq -er '.sysroot.version' clientside.json)"
+          id="$(jq -er '.sysroot.id' clientside.json)"
+          {
+            echo "kernel=kernel/${kernel}"
+            echo "sysroot=sysroot/${track}/${version}/${id}"
+          } >> "$GITHUB_OUTPUT"
+
+      # From where the website serves them, so what's tested is exactly what
+      # students get. Nothing here is published until the track points at it,
+      # so a PR naming an unpublished kernel or sysroot fails right here.
+      - name: Fetch the kernel and sysroot
+        run: |
+          base="https://exercism.org/test-runners"
+          fetch() {
+            mkdir -p "$(dirname "$1")"
+            curl --fail --silent --show-error --location --retry 3 "${base}/$1" --output "$1"
+          }
+          for f in kernel.js kernel_bg.wasm kernel_client.mjs; do
+            fetch "${{ steps.config.outputs.kernel }}/${f}"
+          done
+          for f in sysroot.tar boot.json; do
+            fetch "${{ steps.config.outputs.sysroot }}/${f}"
+          done
+          ls -l "${{ steps.config.outputs.kernel }}" "${{ steps.config.outputs.sysroot }}"
+
+      # The exact tarball publish-clientside.yml would ship, with the suite
+      # laid on top.
+      - name: Build the runner tarball
+        run: |
+          bin/build-clientside-tarball.sh test-runner.tar
+          tar --append --file test-runner.tar --transform 's|^|opt/test-runner/|' bin/run-tests.sh tests
+
+      # Same merge as publish-clientside.yml: the sysroot describes itself,
+      # the track adds its env and preload.
+      - name: Build boot.json
+        run: |
+          jq -s '.[0] as $base | .[1] as $track |
+            $base + {
+              env: ($base.env + ($track.env // {})),
+              preload: ($track.preload // $base.preload)
+            }' "${{ steps.config.outputs.sysroot }}/boot.json" clientside.json > boot.json
+
+      - name: Install Playwright
+        working-directory: harness
+        run: |
+          npm install --no-save --no-package-lock playwright@1.63.0
+          npx playwright install --with-deps chromium
+
+      - name: Run the suite in the kernel
+        run: |
+          node harness/run-in-kernel.mjs \
+            "${{ steps.config.outputs.kernel }}" \
+            "${{ steps.config.outputs.sysroot }}" \
+            boot.json test-runner.tar \
+            /opt/test-runner/bin/run-tests.sh

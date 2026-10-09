@@ -1,0 +1,16 @@
+{
+  "sysroot": {
+    "version": "19.0.0",
+    "id": 1
+  },
+  "kernel": "979c9dec-976e-4b68-a54e-e48f79eb2635",
+  "timeout": 30,
+  "env": {},
+  "precompile": [
+    "/usr/bin/bash",
+    "/usr/bin/coreutils",
+    "/usr/bin/make",
+    "/usr/bin/cmake",
+    "/usr/bin/clang"
+  ]
+}

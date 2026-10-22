@@ -26,6 +26,7 @@ for test_dir in tests/*; do
     for i in "${results_file_path}" "${expected_results_file_path}"; do
         sed \
             -e 's/:[0-9]\{1,\}:/:NN:/g' \
+            -e '/^{"version": 3, "status": "error"/ s/"message": ".*"}$/"message": "<compiler output>"}/' \
             "${i}" "${i}" > "${i}.cleaned"
     done
     echo "${test_dir_name}: comparing results.json to expected_results.json"

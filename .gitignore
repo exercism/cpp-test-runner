@@ -1,2 +1,3 @@
 .vscode/*
 tests/*/results.json
+bin/exercism_parser

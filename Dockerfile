@@ -1,6 +1,6 @@
 FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
-RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev
+RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev mold
 
 # Build Catch as a library directly inside the Docker image
 # since it takes a bit of time to compile it,this way we speed

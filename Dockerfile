@@ -12,6 +12,15 @@ RUN git clone https://github.com/catchorg/Catch2.git --depth 1 --branch v3.4.0 &
     cd .. && \
     rm -rf Catch2
 
+# Precompile Catch2's catch_all.hpp, which every test file includes. Parsing it
+# takes about a second per run, and loading the precompiled copy takes about
+# 0.1 s. GCC only uses the precompiled copy when the compiler options match, so
+# these are the options used by the exercises' CMakeLists.txt in Debug mode.
+# -Wpedantic matters because it changes which macros GCC defines.
+# bin/compile-with-pch.sh makes the test file include it first.
+RUN c++ -std=c++17 -g -Wall -Wextra -Wpedantic -Werror -x c++-header \
+    /usr/local/include/catch2/catch_all.hpp -o /usr/local/include/catch2/catch_all.hpp.gch
+
 WORKDIR /opt/test-runner
 COPY . .
 RUN g++ -I ./include ./src/*.cpp -o ./bin/exercism_parser -lboost_system -lboost_json

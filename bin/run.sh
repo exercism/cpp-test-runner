@@ -47,7 +47,17 @@ parse_results() {
     /opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
 }
 
-cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
+# The Docker image holds a precompiled copy of Catch2's header, which saves
+# about a second on every compile of the test file. compile-with-pch.sh makes
+# the test file use it. The browser runner has no precompiled header, so it
+# compiles as before.
+cmake_options="-DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1"
+if [ -e /usr/local/include/catch2/catch_all.hpp.gch ]; then
+    export EXERCISM_TEST_FILE="${test_file_path}"
+    cmake_options="${cmake_options} -DCMAKE_CXX_COMPILER_LAUNCHER=/opt/test-runner/bin/compile-with-pch.sh"
+fi
+
+cmake ${cmake_options} .
 
 # Build only the test executable. The default target also runs the tests,
 # so building it ran every test twice: once from make and once below to

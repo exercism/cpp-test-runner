@@ -43,12 +43,56 @@ cp -R "${input_dir}/" "${build_dir}" && cd "${build_dir}"
 # Replace the old Catch2 v2 include line with Catch2 v3
 sed -i -e 's/#include <catch2\/catch.hpp>/#include <catch2\/catch_all.hpp>/g' "${test_file_path}"
 
-cmake -DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1 .
-make 2> "${compilation_errors_file_name}"
+parse_results() {
+    /opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
+}
+
+# The Docker image holds a precompiled copy of Catch2's header, which saves
+# about a second on every compile of the test file. compile-with-pch.sh makes
+# the test file use it. The browser runner has no precompiled header, so it
+# compiles as before.
+cmake_options="-DEXERCISM_TEST_SUITE=1 -DEXERCISM_RUN_ALL_TESTS=1"
+if [ -e /usr/local/include/catch2/catch_all.hpp.gch ]; then
+    export EXERCISM_TEST_FILE="${test_file_path}"
+    cmake_options="${cmake_options} -DCMAKE_CXX_COMPILER_LAUNCHER=/opt/test-runner/bin/compile-with-pch.sh"
+fi
+
+# mold links the test executable in about 0.06 s, against about 0.3 s for
+# GNU ld, because it uses all cores and does less work per symbol.
+if command -v mold > /dev/null; then
+    cmake_options="${cmake_options} -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=mold"
+fi
+
+cmake ${cmake_options} .
+
+# Build only the test executable. The default target also runs the tests,
+# so building it ran every test twice: once from make and once below to
+# write the XML. Slow solutions took twice as long and timed out sooner.
+# An exercise with no target named after the slug builds everything as before.
+# The browser runner has no grep, so this uses sed.
+built_target_only=false
+if [ -n "$(sed -n "/^${slug}:/p" Makefile)" ]; then
+    built_target_only=true
+    make "${slug}" 2> "${compilation_errors_file_name}"
+else
+    make 2> "${compilation_errors_file_name}"
+fi
 
 # In case of compilation errors the executable will not be created
 [ -f "./${slug}" ] && chmod +x "./${slug}" && "./${slug}" -r xml -o "${test_output_file_name}"
-/opt/test-runner/bin/exercism_parser "${build_dir}/${test_output_file_name}" "${results_file}" "${build_dir}/${compilation_errors_file_name}" "${test_file_path}"
+parse_results
+
+# If the tests crashed or threw, the parser reports an error and shows the
+# compilation errors file as the message. Run the default target as before,
+# so that the message holds the same output from make as it did before.
+if ${built_target_only} && [ -f "./${slug}" ]; then
+    case "$(cat "${results_file}")" in
+        *'"status": "error"'*)
+            make 2>> "${compilation_errors_file_name}"
+            parse_results
+            ;;
+    esac
+fi
 
 cd -
 

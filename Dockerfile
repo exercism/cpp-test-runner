@@ -1,6 +1,6 @@
 FROM alpine:3.24.3@sha256:be2656061b536c1883c4034790e21d0a09c5aaaf51968b89368a3c0371ea2c9a
 
-RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev
+RUN apk add --no-cache coreutils g++ libc-dev cmake make git boost-dev mold
 
 # Build Catch as a library directly inside the Docker image
 # since it takes a bit of time to compile it,this way we speed
@@ -11,6 +11,15 @@ RUN git clone https://github.com/catchorg/Catch2.git --depth 1 --branch v3.4.0 &
     cmake --build build/ --target install && \
     cd .. && \
     rm -rf Catch2
+
+# Precompile Catch2's catch_all.hpp, which every test file includes. Parsing it
+# takes about a second per run, and loading the precompiled copy takes about
+# 0.1 s. GCC only uses the precompiled copy when the compiler options match, so
+# these are the options used by the exercises' CMakeLists.txt in Debug mode.
+# -Wpedantic matters because it changes which macros GCC defines.
+# bin/compile-with-pch.sh makes the test file include it first.
+RUN c++ -std=c++17 -g -Wall -Wextra -Wpedantic -Werror -x c++-header \
+    /usr/local/include/catch2/catch_all.hpp -o /usr/local/include/catch2/catch_all.hpp.gch
 
 WORKDIR /opt/test-runner
 COPY . .
